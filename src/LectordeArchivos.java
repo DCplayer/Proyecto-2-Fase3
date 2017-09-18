@@ -1,4 +1,6 @@
+import com.sun.java.util.jar.pack.*;
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader;
+import com.sun.xml.internal.ws.api.streaming.XMLStreamReaderFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -15,6 +17,11 @@ public class LectordeArchivos {
     private ArrayList<NodosRamas> Char;
     private ArrayList<NodosRamas> Characters;
     private ArrayList<NodosRamas> Keywords;
+    private ArrayList<NodosRamas> Symbol;
+
+    public static Token PunteroCompleto;
+    public static Token lookahead;
+    public static BufferedReader lectorTokens;
 
 
 
@@ -39,12 +46,7 @@ public class LectordeArchivos {
 
         String KeywordDecl = "(" +identRegex + ")=(" +stringRegex +")";
 
-        String Symbol = "(" + identRegex + ")|(" + stringRegex + ")|(" + charRegex + ")" ;
-        String TokenFactor = "";
-        String TokenTerm = "";
-        String TokenExpr = "";
-        String TokenDecl = "";
-
+        String SymbolRegex = "(" + identRegex + ")|(" + stringRegex + ")|(" + charRegex + ")" ;
 
         /*---------------------------------------------CreacionDirecta------------------------------------------------*/
 
@@ -121,6 +123,17 @@ public class LectordeArchivos {
             numeroParaElID = numeroParaElID + 1;
         }
         this.Keywords = Keywords;
+        /*Automata Symbool*/
+        Arbol arbolSymbol = new Arbol();
+        ArrayList<NodosRamas> Symbol = arbolSymbol.CrearElAFDDirecto(SymbolRegex);
+        numeroParaElID = 0;
+
+        for(NodosRamas nodoRama: Symbol){
+            nodoRama.setId(numeroParaElID);
+            numeroParaElID = numeroParaElID + 1;
+        }
+        this.Symbol = Symbol;
+
 
 
         /*------------------------------------------------Simular AFD-------------------------------------*/
@@ -128,6 +141,92 @@ public class LectordeArchivos {
         * un string y se va moviendo de nodo en nodo hasta que se acaba el string, siendo el ultimo nodo de llegada el
         * resultado de ese string dentro del automata y, viendo el contenido de ese nodo, podemos verificar si es un nodo
         * de aceptacion, ergo el string es aceptado, o si este string no es aceptado por dicho automata*/
+    }
+
+    public void match(String terminal){
+        if(lookahead.getId().equals(terminal)){
+            lookahead = getNextToken();
+        }
+
+    }
+
+    public Token getNextToken(){
+
+    }
+
+    public boolean hasMoreTokens(){
+
+    }
+
+    public void TokenDecl(){
+        lookahead = getNextToken();
+        ident();
+        if(hasMoreTokens()){
+            match("=");
+            TokenExpr();
+            match(".");
+        }
+
+    }
+
+    public void TokenExpr(){
+        TokenTerm();
+        while(hasMoreTokens()){
+            match("|");
+            TokenTerm();
+        }
+    }
+
+    public void TokenTerm(){
+        TokenFactor();
+        while(hasMoreTokens()){
+            TokenFactor();
+        }
+
+    }
+
+    public void TokenFactor(){
+        switch (lookahead.getId()){
+            case("("):{
+                TokenExpr();
+                match(")");
+
+            }
+            case("["):{
+                TokenExpr();
+                match("]");
+            }
+            case("{"):{
+                TokenExpr();
+                match("}");
+            }
+            case("\""):case("\'"):case("a"):case("b"):case("c"):case("d"):case("e"):case("f"):case("g"):case("h"):
+            case("i"):case("j"):case("k"):case("l"):case("m"):case("n"):case("o"):case("p"):case("q"):case("r"):
+            case("s"):case("t"):case("u"):case("v"):case("w"):case("x"):case("y"):case("z"):case("A"):case("B"):
+            case("C"):case("D"):case("E"):case("F"):case("G"):case("H"):case("I"):case("J"):case("K"):case("L"):
+            case("M"):case("N"):case("O"):case("P"):case("Q"):case("R"):case("S"):case("T"):case("U"):case("V"):
+            case("W"):case("X"):case("Y"):case("Z"):{
+
+
+            }
+            default:{
+                System.out.println("Syntax Error: Token not valid");
+            }
+
+
+        }
+    }
+
+    public void ident(){
+        if(simularAFD(ident, lookahead.getId())){
+            match(lookahead.getId());
+        }
+    }
+
+    public void symbol(){
+        if(simularAFD(Symbol, lookahead.getId())){
+            match(lookahead.getId());
+        }
     }
 
     public boolean simularAFD(ArrayList<NodosRamas> listaDeAFD, String s){
@@ -204,6 +303,7 @@ public class LectordeArchivos {
         * documento*/
         int numeroCharacters = 0;
         int numeroKeywords = 0;
+        int numeroTokens = 0;
         for(int s = 0; s<lineas.size(); s++){
             StringTokenizer lineaALeer = new StringTokenizer(lineas.get(s));
             String laPrueba = lineaALeer.nextToken();
@@ -213,24 +313,202 @@ public class LectordeArchivos {
             else if(laPrueba.equals("KEYWORDS")){
                 numeroKeywords = s +1;
             }
+            else if(laPrueba.equals("TOKENS")){
+                numeroTokens = s + 1;
+            }
+
         }
 
         boolean soloChequeando = true;
         /*Verificar si existen las palabras reservadas, simular si esta correcto lo que se puso debajo de ellas */
-        if(numeroCharacters != 0 && numeroKeywords == 0){
+        if(numeroCharacters != 0 && numeroKeywords == 0 && numeroTokens == 0){
             /*Solo se encontro la palabra CHARACTERS*/
             for(int i = numeroCharacters;i < lineas.size()-2; i++ ){
+                boolean sintaxis = true;
+                String lineaConPunto = lineas.get(i);
+                lineaConPunto = lineaConPunto.replaceAll("\\s+","");
+                String lineaSinPunto = lineaConPunto.substring(0, lineaConPunto.length()-1);
+
+                if(!lineaConPunto.substring(lineaConPunto.length()-1, lineaConPunto.length()).equals(".")){
+                    resultado = false;
+                    sintaxis = false;
+                    System.out.println("Syntax error: Line " +(i+1) + " written code, exprected \'.\'");
+                }
+                if(sintaxis){
+                    HashSet<NodosRamas> prueba = new HashSet<>();
+                    HashSet<Rama> masPruebas = new HashSet<>();
+                    for(NodosRamas j: Characters){
+                        if(j.getConjunto().size() == 0){
+                            prueba.add(j);
+                        }
+                        for(Rama x: j.getConjunto()){
+                            if(x.getContenido().equals("#")){
+                                masPruebas.add(x);
+                            }
+                        }
+                    }
+                    for(NodosRamas unNodo: prueba){
+                        unNodo.getConjunto().addAll(masPruebas);
+                    }
+
+                    if(!simularAFD(Characters, lineaSinPunto)){
+                        resultado = false;
+                        System.out.println("Syntax error: Line " +(i+1) + " of written code, expression "+
+                                lineaConPunto+ "is not a CHARACTER expression");
+                    }
+                }
+
+
 
             }
 
-        }else if(numeroCharacters == 0 && numeroKeywords != 0){
+        }else if(numeroCharacters == 0 && numeroKeywords != 0 && numeroTokens == 0){
             /*Solo se encontro la palabra KEYWORDS*/
             for(int i = numeroKeywords; i < lineas.size()-2; i++){
+                boolean sintaxis = true;
+                String lineaConPunto = lineas.get(i);
+                lineaConPunto = lineaConPunto.replaceAll("\\s+","");
+                String lineaSinPunto = lineaConPunto.substring(0, lineaConPunto.length()-1);
+
+                if(!lineaConPunto.substring(lineaConPunto.length()-1, lineaConPunto.length()).equals(".")){
+                    resultado = false;
+                    sintaxis = false;
+                    System.out.println("Syntax error: Line " +(i+1) + " written code, exprected \'.\'");
+                }
+
+                if(sintaxis){
+                    if(!simularAFD(Keywords, lineaSinPunto)){
+                        resultado = false;
+                        System.out.println("Syntax error: Line " +(i+1)+ " of written code, " + lineaConPunto +
+                                " not an KEYWORD expresion");
+                    }
+                }
+            }
+
+        }else if(numeroCharacters != 0 && numeroKeywords != 0 && numeroTokens == 0){
+            /*Se encontraron ambas palabras, y se valida si Characters esta antes que Keywords*/
+            if(numeroKeywords < numeroCharacters){
+                resultado = false;
+                soloChequeando = false;
+                System.out.println("Syntax error: KEYWORDS before CHARACTERS");
+
+            }
+            if(soloChequeando){
+                for(int i = numeroCharacters; i < numeroKeywords-1; i++){
+                        boolean sintaxis = true;
+                        String lineaConPunto = lineas.get(i);
+                        lineaConPunto = lineaConPunto.replaceAll("\\s+","");
+                        String lineaSinPunto = lineaConPunto.substring(0, lineaConPunto.length()-1);
+
+                        if(!lineaConPunto.substring(lineaConPunto.length()-1, lineaConPunto.length()).equals(".")){
+                            resultado = false;
+                            sintaxis = false;
+                            System.out.println("Syntax error: Line " +(i+1) + " written code, exprected \'.\'");
+                        }
+                        if(sintaxis){
+                            HashSet<NodosRamas> prueba = new HashSet<>();
+                            HashSet<Rama> masPruebas = new HashSet<>();
+                            for(NodosRamas j: Characters){
+                                if(j.getConjunto().size() == 0){
+                                    prueba.add(j);
+                                }
+                                for(Rama x: j.getConjunto()){
+                                    if(x.getContenido().equals("#")){
+                                        masPruebas.add(x);
+                                    }
+                                }
+                            }
+                            for(NodosRamas unNodo: prueba){
+                                unNodo.getConjunto().addAll(masPruebas);
+                            }
+
+                            if(!simularAFD(Characters, lineaSinPunto)){
+                                resultado = false;
+                                System.out.println("Syntax error: Line " +(i+1) + " of written code, expression "+
+                                        lineaConPunto+ "is not a CHARACTER expression");
+                            }
+                        }
+
+
+
+                }
+                for(int i = numeroKeywords; i< lineas.size()-1; i++){
+
+                    boolean sintaxis = true;
+                    String lineaConPunto = lineas.get(i);
+                    lineaConPunto = lineaConPunto.replaceAll("\\s+","");
+                    String lineaSinPunto = lineaConPunto.substring(0, lineaConPunto.length()-1);
+
+                    if(!lineaConPunto.substring(lineaConPunto.length()-1, lineaConPunto.length()).equals(".")){
+                        resultado = false;
+                        sintaxis = false;
+                        System.out.println("Syntax error: Line " +(i+1) + " written code, exprected \'.\'");
+                    }
+
+                    if(sintaxis){
+                        if(!simularAFD(Keywords, lineaSinPunto)){
+                            resultado = false;
+                            System.out.println("Syntax error: Line " +(i+1)+ " of written code, " + lineaConPunto +
+                                    " not an KEYWORD expresion");
+                        }
+                    }
+
+
+                }
+            }
+        }else if(numeroCharacters == 0 && numeroKeywords == 0 && numeroTokens != 0){
+            /*Se encuentra la palabra TOKEN pero no ninguna de las anteriores*/
+            System.out.println("Syntax Error: Tokens must depend on CHARACTERS");
+
+        }else if(numeroCharacters == 0 && numeroKeywords != 0 && numeroTokens != 0){
+            /*Se encuentra la palabra KEYWORDS y TOKENS*/
+            System.out.println("Syntax Error: Tokens must depend on CHARACTERS");
+
+
+        }else if(numeroCharacters != 0 && numeroKeywords == 0 && numeroTokens != 0){/*--------------------------------*/
+            /*Se encuentra las palabras CHARACTERS y TOKENS*/
+            for(int i = numeroCharacters; i < numeroKeywords-1; i++){
+                boolean sintaxis = true;
+                String lineaConPunto = lineas.get(i);
+                lineaConPunto = lineaConPunto.replaceAll("\\s+","");
+                String lineaSinPunto = lineaConPunto.substring(0, lineaConPunto.length()-1);
+
+                if(!lineaConPunto.substring(lineaConPunto.length()-1, lineaConPunto.length()).equals(".")){
+                    resultado = false;
+                    sintaxis = false;
+                    System.out.println("Syntax error: Line " +(i+1) + " written code, exprected \'.\'");
+                }
+                if(sintaxis){
+                    HashSet<NodosRamas> prueba = new HashSet<>();
+                    HashSet<Rama> masPruebas = new HashSet<>();
+                    for(NodosRamas j: Characters){
+                        if(j.getConjunto().size() == 0){
+                            prueba.add(j);
+                        }
+                        for(Rama x: j.getConjunto()){
+                            if(x.getContenido().equals("#")){
+                                masPruebas.add(x);
+                            }
+                        }
+                    }
+                    for(NodosRamas unNodo: prueba){
+                        unNodo.getConjunto().addAll(masPruebas);
+                    }
+
+                    if(!simularAFD(Characters, lineaSinPunto)){
+                        resultado = false;
+                        System.out.println("Syntax error: Line " +(i+1) + " of written code, expression "+
+                                lineaConPunto+ "is not a CHARACTER expression");
+                    }
+                }
 
             }
 
-        }else if(numeroCharacters != 0 && numeroKeywords != 0){
-            /*Se encontraron ambas palabras, y se valida si Characters esta antes que Keywords*/
+            for(int i = numeroTokens; i< lineas.size()-1; i++){
+
+            }
+        }else if(numeroCharacters != 0 && numeroKeywords != 0 && numeroTokens != 0){
+            /*Se encuentran las palabras CHARACTERS, KEYWORDS y TOKENS*/
             if(numeroKeywords < numeroCharacters){
                 resultado = false;
                 soloChequeando = false;
@@ -276,7 +554,7 @@ public class LectordeArchivos {
 
 
                 }
-                for(int i = numeroKeywords; i< lineas.size()-1; i++){
+                for(int i = numeroKeywords; i< numeroTokens-1; i++){
 
                     boolean sintaxis = true;
                     String lineaConPunto = lineas.get(i);
@@ -297,6 +575,9 @@ public class LectordeArchivos {
                         }
                     }
 
+
+                }
+                for (int i = numeroTokens; i <  lineas.size()-1; i++){
 
                 }
             }

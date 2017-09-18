@@ -147,6 +147,68 @@ public class CreadorTokens {
                 "        } catch (IOException e) {\n" +
                 "            e.printStackTrace();\n" +
                 "        }\n" +
+                "        " +
+                "" +
+                "" +
+                "        try(BufferedReader CreadorDeRegex = new BufferedReader(new FileReader(\"tokens.txt\"))){\n" +
+                "            ArrayList<ArrayList<String>> conocidos = new ArrayList<>();\n" +
+                "            CreadorDeRegex.mark(1000);\n" +
+                "            String lectura = CreadorDeRegex.readLine();\n" +
+                "            ArrayList<String> identificadores = new ArrayList<>();\n" +
+                "            while(lectura != null){\n" +
+                "                int indexComa = lectura.indexOf(\",\");\n" +
+                "                if(!identificadores.contains(lectura.substring(indexComa +1, lectura.length()))){\n" +
+                "                    identificadores.add(lectura.substring(indexComa +1, lectura.length()));\n" +
+                "                }\n" +
+                "                lectura = CreadorDeRegex.readLine();\n" +
+                "\n" +
+                "            }\n" +
+                "            for(String s: identificadores){\n" +
+                "                if(!s.equals(\"\")){\n" +
+                "                    ArrayList<String> AL = new ArrayList<>();\n" +
+                "                    AL.add(s);\n" +
+                "                    conocidos.add(AL);\n" +
+                "                }\n" +
+                "\n" +
+                "            }\n" +
+                "            CreadorDeRegex.reset();\n" +
+                "            CreadorDeRegex.mark(1000);\n" +
+                "            lectura = CreadorDeRegex.readLine();\n" +
+                "            while(lectura != null){\n" +
+                "                if (!lectura.equals(\"\")){\n" +
+                "                    int indexComa = lectura.indexOf(\",\");\n" +
+                "                    String palabra = lectura.substring(indexComa +1, lectura.length());\n" +
+                "                    for(ArrayList<String> procesados: conocidos){\n" +
+                "                        if(procesados.get(0).equals(palabra)){\n" +
+                "                            if(procesados.size() == 1){\n" +
+                "                                String agregar = lectura.substring(0, indexComa);\n" +
+                "                                procesados.add(agregar);\n" +
+                "                            }\n" +
+                "                            else{\n" +
+                "                                String agregar = lectura.substring(0, indexComa);\n" +
+                "                                String hay = procesados.get(1) + \"|\" + agregar;\n" +
+                "                                procesados.set(1,hay);\n" +
+                "                            }\n" +
+                "                        }\n" +
+                "                    }\n" +
+                "                }\n" +
+                "                lectura = CreadorDeRegex.readLine();\n" +
+                "            }\n" +
+                "            System.out.println(conocidos);\n" +
+                "            /*Conocidos = un ArrayList que */\n" +
+                "\n" +
+                "\n" +
+                "            CreadorDeRegex.close();\n" +
+                "        }catch (FileNotFoundException e) {\n" +
+                "        e.printStackTrace();\n" +
+                "        }catch (IOException e) {\n" +
+                "            e.printStackTrace();\n" +
+                "        }\n" +
+                "        System.out.println(lineasAImprimir);\n" +
+                "\n" +
+                "\n" +
+                "\n" +
+
                 "";
 
         /*Aqui viene el codigo que le da forma a la clase de Java*/
@@ -272,8 +334,7 @@ public class CreadorTokens {
                 }
                 temporales.add(valor.substring(indiceInicial+1));
 
-                /*----------------------------------AQUI ME QUEDE AQUI ESTAMOS EN PASO 4 DE LA HOJA--------------*/
-                /*------------------------------------PROBAR ESTE METODO EN ESTA PARTE EN ESPECIFICO*/
+
                 Stack<ArrayList<String>> palabrasACombinar = new Stack();
 
                 for(String compuesto: temporales){
@@ -307,34 +368,16 @@ public class CreadorTokens {
 
                 }
 
-                ArrayList<String> cola = new ArrayList<>();
-                ArrayList<String> cabeza = new ArrayList<>();
-                boolean quedaUno = false;
+                ArrayList<String> TodasLasCombinaciones = new ArrayList<>();
 
-                while(!quedaUno){
-                    cola = palabrasACombinar.pop();
-                    if(palabrasACombinar.isEmpty()){
-                        quedaUno = true;
-                        palabrasACombinar.push(cola);
-                    }
-                    else{
-                        cabeza = palabrasACombinar.pop();
-                        ArrayList<String> combinacion = new ArrayList<>();
-                        for(String x: cabeza){
-                            for(String y: cola){
-                                combinacion.add(x + y);
-                            }
-                        }
-                        palabrasACombinar.push(combinacion);
-
-                    }
-
+                while(!palabrasACombinar.isEmpty()){
+                    TodasLasCombinaciones.addAll(palabrasACombinar.pop());
                 }
-                ArrayList<String> todasLasCombinaciones = new ArrayList<>();
-                todasLasCombinaciones = palabrasACombinar.pop();
-                palabraAprendida.addAll(todasLasCombinaciones);
 
-                for(String x: todasLasCombinaciones){
+
+                palabraAprendida.addAll(TodasLasCombinaciones);
+
+                for(String x: TodasLasCombinaciones){
                     resultado = resultado + x + "," +  identificador+ "\n";
 
                 }
