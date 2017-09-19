@@ -23,7 +23,7 @@ public class LectordeArchivos {
     private Stack<String> token = new Stack<>();
 
     public static Token PunteroCompleto;
-    public static  Token lookahead = new Token();
+    public static Token lookahead = new Token();
     public static int numeroDeLinea = 0;
     public static BufferedReader lectorTokens;
 
@@ -142,7 +142,6 @@ public class LectordeArchivos {
         this.Symbol = Symbol;
 
 
-
         /*------------------------------------------------Simular AFD-------------------------------------*/
         /*Lo que se hace es, teniendo un ArrayList de NodosRamas, se le es alimentado cada uno de los caracteres de
         * un string y se va moviendo de nodo en nodo hasta que se acaba el string, siendo el ultimo nodo de llegada el
@@ -154,14 +153,18 @@ public class LectordeArchivos {
     public void TokenDecl(String Token){
         parteDelToken.clear();
         token.clear();
-        String linea = Token.replaceAll("\\s+", "");
+        String nolinea = Token.replaceAll("\\s+", "");
+        String linea = nolinea.substring(0, nolinea.length()-1);
+        String dot = nolinea.substring(nolinea.length()-1 ,  nolinea.length());
+        if(!dot.equals(".")){
+            System.out.println("Syntax Error: Expected \".\" en linea " + numeroDeLinea + " de codigo escrito");
+        }
         for(int i = linea.length()-1; i >= 0; i--){
             String s = linea.substring(i, i+1);
             token.push(s);
         }
         getNextToken();
         ident();
-        getNextToken();
         if(!lookahead.getId().equals(".")){
             if(!match("=")){
                 System.out.println("Syntax Error: Expected \"=\" en linea " + numeroDeLinea+ " de codigo escrito");
@@ -170,11 +173,12 @@ public class LectordeArchivos {
                 System.out.println("Syntax Error: Expresion en linea " + numeroDeLinea + " no es una TokenExpr");
 
             }
-            if(!match(".")){
-                System.out.println("Syntax Error: Missing \".\" en " + numeroDeLinea + "de codigo escrito");
-            }
+
         }
-        estructuraTokens.add(parteDelToken);
+        parteDelToken.add(".");
+        ArrayList<String> remplazo = new ArrayList<>();
+        remplazo.addAll(parteDelToken);
+        estructuraTokens.add(remplazo);
 
     }
 
@@ -657,6 +661,7 @@ public class LectordeArchivos {
                     TokenDecl(lineas.get(i));
 
                 }
+                System.out.println(estructuraTokens);
             }
         }
 
