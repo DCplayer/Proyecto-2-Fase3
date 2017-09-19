@@ -188,6 +188,8 @@ public class LectordeArchivos {
         String entrega = "";
         while(!bandera && !token.isEmpty()){
             switch (token.peek()){
+                case("\'"):
+                case("\""):
                 case("="):
                 case("."):
                 case("|"):
