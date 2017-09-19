@@ -16,6 +16,7 @@ public class CreadorTokens {
 
     private int numeroCharacters = 0;
     private int numeroKeywords = 0;
+    private int numeroTokens = 0;
 
     private String imports = "import java.util.ArrayList;\nimport java.util.Scanner;\nimport java.io.*;\n" +
             "import java.io.FileReader;\nimport java.util.StringTokenizer;\n";
@@ -45,6 +46,9 @@ public class CreadorTokens {
             else if(laPrueba.equals("KEYWORDS")){
                 numeroKeywords = s +1;
             }
+            else if(laPrueba.equals("TOKENS")){
+                numeroTokens = s + 1;
+            }
         }
 
 
@@ -66,7 +70,7 @@ public class CreadorTokens {
         /*Creador de Tokens debajo de KeyWord*/
         if(numeroKeywords != 0){
             ArrayList<String> keywords = new ArrayList<>();
-            for(int j = numeroKeywords; j < lineas.size()-1; j++){
+            for(int j = numeroKeywords; j < numeroTokens-1; j++){
                 keywords.add(lineas.get(j));
             }
 

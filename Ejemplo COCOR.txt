@@ -12,4 +12,10 @@ KEYWORDS
 if="if".
 while="while".
 
+TOKENS
+
+id = letter{letter}.
+number = digit{digit}.
+hexnumber = hexdigit{hexdigit}"(H)".
+
 END Ejemplo.

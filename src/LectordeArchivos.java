@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Stack;
 import java.util.StringTokenizer;
 
 public class LectordeArchivos {
@@ -19,9 +20,15 @@ public class LectordeArchivos {
     private ArrayList<NodosRamas> Keywords;
     private ArrayList<NodosRamas> Symbol;
 
+    private Stack<String> token = new Stack<>();
+
     public static Token PunteroCompleto;
-    public static Token lookahead;
+    public static  Token lookahead = new Token();
+    public static int numeroDeLinea = 0;
     public static BufferedReader lectorTokens;
+
+    private ArrayList<String> parteDelToken = new ArrayList<>();
+    private ArrayList<ArrayList<String>> estructuraTokens = new ArrayList<>();
 
 
 
@@ -143,91 +150,157 @@ public class LectordeArchivos {
         * de aceptacion, ergo el string es aceptado, o si este string no es aceptado por dicho automata*/
     }
 
-    public void match(String terminal){
-        if(lookahead.getId().equals(terminal)){
-            lookahead = getNextToken();
+
+    public void TokenDecl(String Token){
+        parteDelToken.clear();
+        token.clear();
+        String linea = Token.replaceAll("\\s+", "");
+        for(int i = linea.length()-1; i >= 0; i--){
+            String s = linea.substring(i, i+1);
+            token.push(s);
         }
-
-    }
-
-    public Token getNextToken(){
-
-    }
-
-    public boolean hasMoreTokens(){
-
-    }
-
-    public void TokenDecl(){
-        lookahead = getNextToken();
+        getNextToken();
         ident();
-        if(hasMoreTokens()){
-            match("=");
-            TokenExpr();
-            match(".");
+        getNextToken();
+        if(!lookahead.getId().equals(".")){
+            if(!match("=")){
+                System.out.println("Syntax Error: Expected \"=\" en linea " + numeroDeLinea+ " de codigo escrito");
+            }
+            if(!TokenExpr()){
+                System.out.println("Syntax Error: Expresion en linea " + numeroDeLinea + " no es una TokenExpr");
+
+            }
+            if(!match(".")){
+                System.out.println("Syntax Error: Missing \".\" en " + numeroDeLinea + "de codigo escrito");
+            }
         }
+        estructuraTokens.add(parteDelToken);
 
     }
 
-    public void TokenExpr(){
-        TokenTerm();
-        while(hasMoreTokens()){
-            match("|");
-            TokenTerm();
+
+    public void getNextToken(){
+        boolean bandera = false;
+        String entrega = "";
+        while(!bandera && !token.isEmpty()){
+            switch (token.peek()){
+                case("="):
+                case("."):
+                case("|"):
+                case("("):
+                case(")"):
+                case("{"):
+                case("}"):
+                case("["):
+                case("]"):
+                case("+"):
+                case("-"):{
+                    bandera = true;
+                    if(entrega.equals("")){
+                        entrega = token.pop();
+
+                    }
+                    break;
+                }
+                default:{
+                    entrega = entrega + token.pop();
+                }
+            }
         }
-    }
+        parteDelToken.add(entrega);
+        lookahead.setId(entrega);
 
-    public void TokenTerm(){
-        TokenFactor();
-        while(hasMoreTokens()){
-            TokenFactor();
-        }
-
-    }
-
-    public void TokenFactor(){
-        switch (lookahead.getId()){
-            case("("):{
-                TokenExpr();
-                match(")");
-
-            }
-            case("["):{
-                TokenExpr();
-                match("]");
-            }
-            case("{"):{
-                TokenExpr();
-                match("}");
-            }
-            case("\""):case("\'"):case("a"):case("b"):case("c"):case("d"):case("e"):case("f"):case("g"):case("h"):
-            case("i"):case("j"):case("k"):case("l"):case("m"):case("n"):case("o"):case("p"):case("q"):case("r"):
-            case("s"):case("t"):case("u"):case("v"):case("w"):case("x"):case("y"):case("z"):case("A"):case("B"):
-            case("C"):case("D"):case("E"):case("F"):case("G"):case("H"):case("I"):case("J"):case("K"):case("L"):
-            case("M"):case("N"):case("O"):case("P"):case("Q"):case("R"):case("S"):case("T"):case("U"):case("V"):
-            case("W"):case("X"):case("Y"):case("Z"):{
-
-
-            }
-            default:{
-                System.out.println("Syntax Error: Token not valid");
-            }
-
-
-        }
     }
 
     public void ident(){
         if(simularAFD(ident, lookahead.getId())){
             match(lookahead.getId());
         }
-    }
-
-    public void symbol(){
-        if(simularAFD(Symbol, lookahead.getId())){
-            match(lookahead.getId());
+        else{
+            System.out.println("Syntax Error: linea de codigo " + numeroDeLinea + " con identificador invalido");
         }
     }
+
+    public boolean symbol(){
+        if(simularAFD(Symbol, lookahead.getId())){
+            match(lookahead.getId());
+            return true;
+        }
+        return false;
+    }
+
+    public boolean match(String terminal){
+        if(lookahead.getId().equals(terminal)){
+            getNextToken();
+            return true;
+        }
+        return false;
+    }
+
+    public boolean TokenExpr(){
+        if(!TokenTerm()){
+            System.out.println("TokenTerm not accepted: linea " +numeroDeLinea + " de codigo escrito");
+            return false;
+        }
+        while(match("|")){
+            if(!TokenTerm()){
+                System.out.println("TokenTerm not accepted: linea " +numeroDeLinea + " de codigo escrito");
+                return false;
+            }
+        }
+        return true;
+
+
+    }
+
+    public boolean TokenTerm(){
+        if(!TokenFactor()){
+            return false;
+        }
+        while(TokenFactor()){
+
+        }
+        return true;
+    }
+
+    public boolean TokenFactor(){
+        if(symbol()){
+           return true;
+        }
+        else if(match("(")){
+            if(!TokenExpr()){
+                System.out.println("Syntax Error: Not a TokenExpr, linea " + numeroDeLinea + " de codigo escrito");
+            }
+            if(!match(")")){
+                System.out.println("Syntax Error: Expected \")\" en linea " + numeroDeLinea+ " de codigo escrito");
+            }
+            return true;
+        }
+        else if(match("{")){
+            if(!TokenExpr()){
+                System.out.println("Syntax Error: Not a TokenExpr, linea " + numeroDeLinea + " de codigo escrito");
+            }
+            if(!match("}")){
+                System.out.println("Syntax Error: Expected \"}\" en linea " + numeroDeLinea+ " de codigo escrito");
+            }
+            return true;
+        }
+        else if(match("[")){
+            if(!TokenExpr()){
+                System.out.println("Syntax Error: Not a TokenExpr, linea " + numeroDeLinea + " de codigo escrito");
+            }
+            if(!match("]")){
+                System.out.println("Syntax Error: Expected \"]\" en linea " + numeroDeLinea+ " de codigo escrito");
+            }
+            return true;
+        }
+        else{
+            return false;
+        }
+
+    }
+
+    /*-----------------------------------------------------------------------------------------------------------------*/
 
     public boolean simularAFD(ArrayList<NodosRamas> listaDeAFD, String s){
 
@@ -505,6 +578,8 @@ public class LectordeArchivos {
             }
 
             for(int i = numeroTokens; i< lineas.size()-1; i++){
+                numeroDeLinea = i;
+                TokenDecl(lineas.get(i));
 
             }
         }else if(numeroCharacters != 0 && numeroKeywords != 0 && numeroTokens != 0){
@@ -578,6 +653,8 @@ public class LectordeArchivos {
 
                 }
                 for (int i = numeroTokens; i <  lineas.size()-1; i++){
+                    numeroDeLinea  = i ;
+                    TokenDecl(lineas.get(i));
 
                 }
             }
