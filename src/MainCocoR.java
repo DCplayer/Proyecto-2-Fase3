@@ -3,10 +3,7 @@ import com.sun.corba.se.impl.oa.poa.ActiveObjectMap;
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Scanner;
-import java.util.StringTokenizer;
+import java.util.*;
 
 /*Este programa funciona siempre y cuando
 * 1. Si se quiere realizar el basicSet, el cual se añade con el termino de Char [.. Char], se debde de utilizar -- en lugar de ..
@@ -26,10 +23,12 @@ public class MainCocoR {
 
 
         //Arraylist que contiene las lineas no vacias del documento con las especificaciones de Cocol/R
-        ArrayList<String> lineas = lector.crearLector(archivaldo);
+        ArrayList<String> lineasSinConversionInicial = lector.crearLector(archivaldo);
+        ArrayList<String> lineas = lector.convertidor(lineasSinConversionInicial);
 
         //Creando el creador de tokens con las lineas del documento de especificaciones de Cocol/R
         CreadorTokens creador = new CreadorTokens(lineas);
+
 
         //Verificar si tiene algun error sintactico el documento. Si no tuviera ninguno, se pasa a la parte de creacion
         // del lexer.
@@ -52,6 +51,11 @@ public class MainCocoR {
         catch (Exception e){
 
         }
+
+        ArrayList<ArrayList<String>> conocidos = new ArrayList<>();
+        ArrayList<ArrayList<String>> EstructurasParaTokens = new ArrayList<>();
+        LectordeArchivos investigador = new LectordeArchivos();
+        ArrayList<ArrayList<NodosRamas>> automatas = new ArrayList<>();
 
         Scanner scanner = new Scanner(System.in);
         System.out.println("Ingrese el nombre del archivo con el código que desea lexear: ");
@@ -110,7 +114,6 @@ public class MainCocoR {
 
 
         try(BufferedReader CreadorDeRegex = new BufferedReader(new FileReader("tokens.txt"))){
-            ArrayList<ArrayList<String>> conocidos = new ArrayList<>();
             CreadorDeRegex.mark(1000);
             String lectura = CreadorDeRegex.readLine();
             ArrayList<String> identificadores = new ArrayList<>();
@@ -153,8 +156,7 @@ public class MainCocoR {
                 }
                 lectura = CreadorDeRegex.readLine();
             }
-            System.out.println(conocidos);
-            /*Conocidos = un ArrayList que */
+
 
 
             CreadorDeRegex.close();
@@ -163,6 +165,99 @@ public class MainCocoR {
         }catch (IOException e) {
             e.printStackTrace();
         }
+
+        try(BufferedReader CreadorDeEstructuras = new BufferedReader(new FileReader("TokensEstructurados.txt"))){
+            CreadorDeEstructuras.mark(1000);
+            String lectura = CreadorDeEstructuras.readLine();
+            while (lectura != null){
+                ArrayList<String> nuevo = new ArrayList<>();
+                String expresionRegular = "";
+                List<String> listado = Arrays.asList(lectura.split(","));
+                nuevo.add(listado.get(0));
+
+                for(int i = 1; i < listado.size(); i++ ){
+                    String identification = listado.get(i);
+                    boolean verificacion = false;
+                    for(ArrayList<String> S: conocidos){
+                        if(identification.equals(S.get(0))){
+                            expresionRegular = expresionRegular + "("  + S.get(1) + ")";
+                            verificacion = true;
+                            break;
+                        }
+
+                    }
+                    if(!verificacion){
+                        expresionRegular = expresionRegular + identification;
+                    }
+                }
+                nuevo.add(expresionRegular);
+                EstructurasParaTokens.add(nuevo);
+                lectura = CreadorDeEstructuras.readLine();
+            }
+            EstructurasParaTokens.remove(EstructurasParaTokens.size()-1);
+            System.out.println(EstructurasParaTokens);
+
+
+
+            CreadorDeEstructuras.close();
+        }catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        for(ArrayList<String> s: EstructurasParaTokens){
+            Arbol arbolString = new Arbol();
+            if(!s.get(1).equals("")){
+                String sub = s.get(1).substring(0, s.get(1).length()-1);
+                ArrayList<NodosRamas> string = arbolString.CrearElAFDDirecto(sub);
+                int numeroParaElID = 0;
+
+                for(NodosRamas nodoRama: string){
+                    nodoRama.setId(numeroParaElID);
+                    numeroParaElID = numeroParaElID + 1;
+                }
+                automatas.add(string);
+            }
+
+
+        }
+
+
+        try(BufferedReader CreadorDeTokensFinales = new BufferedReader(new FileReader("tokens.txt"))){
+            CreadorDeTokensFinales.mark(1000);
+            String lineal = CreadorDeTokensFinales.readLine();
+            while (lineal != null){
+                StringTokenizer st = new StringTokenizer(lineal);
+                while(st.hasMoreTokens()){
+                    String siguiente = st.nextToken();
+                    boolean encontrado = false;
+                    int indice = 0;
+                    for(ArrayList<NodosRamas> automaton: automatas){
+                        if(investigador.simularAFD(automaton, siguiente)){
+                            encontrado = true;
+                            System.out.println("<" + EstructurasParaTokens.get(indice).get(0) + ">");
+
+                        }
+                        indice = indice +1;
+                    }
+                    if(!encontrado){
+                        System.out.println("El token " + siguiente + " no se pudo identificar como Token");
+                    }
+                }
+
+
+
+                lineal = CreadorDeTokensFinales.readLine();
+            }
+
+
+        }catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
         System.out.println(lineasAImprimir);
 
 

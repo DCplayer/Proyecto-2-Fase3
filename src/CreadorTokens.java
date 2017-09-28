@@ -321,9 +321,9 @@ public class CreadorTokens {
                 ArrayList<Integer> indexesDeSuma = new ArrayList<>();
                 ArrayList<String> temporales = new ArrayList<>();
 
-                for (int index = valor.indexOf("~");
+                for (int index = valor.indexOf("┼");
                      index >= 0;
-                     index = valor.indexOf("~", index + 1))
+                     index = valor.indexOf("┼", index + 1))
                 {
                     indexesDeSuma.add(index);
                 }
@@ -410,6 +410,7 @@ public class CreadorTokens {
         }
         return  resultado;
     }
+
 
     public int getNumeroCharacters() {
         return numeroCharacters;

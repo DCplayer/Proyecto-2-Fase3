@@ -1,0 +1,4 @@
+id,letter,{,letter,},.,
+number,digit,{,digit,},.,
+hexnumber,hexdigit,{,hexdigit,},",(,H,),",.,
+

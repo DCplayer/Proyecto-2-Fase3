@@ -1,3 +1,4 @@
+import com.sun.corba.se.impl.corba.ServerRequestImpl;
 import com.sun.java.util.jar.pack.*;
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader;
 import com.sun.xml.internal.ws.api.streaming.XMLStreamReaderFactory;
@@ -5,6 +6,7 @@ import com.sun.xml.internal.ws.api.streaming.XMLStreamReaderFactory;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Stack;
@@ -30,6 +32,7 @@ public class LectordeArchivos {
     private ArrayList<String> parteDelToken = new ArrayList<>();
     private ArrayList<ArrayList<String>> estructuraTokens = new ArrayList<>();
 
+    private boolean comillas = false;
 
 
     public LectordeArchivos(){
@@ -38,8 +41,8 @@ public class LectordeArchivos {
         String letter = "a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I" +
                 "|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z";
         String digit = "0|1|2|3|4|5|6|7|8|9";
-        String butQuote = "!|@|$|^|&|{|}|[|]|\'|>|<|;|:";
-        String butApostrophw = "!|@|$|^|&|{|}|[|]|\"|>|<|;|:";
+        String butQuote = "!|@|$|^|&|{|}|[|]|\'|>|<|;|:|_|,|-|æ|Æ|┼|\\|«|»|~";
+        String butApostrophw = "!|@|$|^|&|{|}|[|]|\"|>|<|;|:|_|,|-|æ|Æ|┼|\\|«|»|~";
 
         String identRegex = "(" + letter+ ")"+ "(" + letter + "|" + digit + ")*";
         String numberRegex = "(" + digit+ ")"  + "(" + digit+ ")" + "*";
@@ -48,7 +51,7 @@ public class LectordeArchivos {
 
         String CharRegex = "(" + charRegex  +")|(CHR(" + numberRegex + "))";
         String BasicSetRegex = "(" + stringRegex + ")|(" + identRegex + ")|((" + CharRegex + ")|(" + CharRegex + "--" + CharRegex + "))";
-        String SetRegex = "(" + BasicSetRegex + ")" + "((~|-)(" + BasicSetRegex + "))*";
+        String SetRegex = "(" + BasicSetRegex + ")" + "((┼|-)(" + BasicSetRegex + "))*";
         String SetDeclRegex = "(" + identRegex+ ")=(" + SetRegex + ")";
 
         String KeywordDecl = "(" +identRegex + ")=(" +stringRegex +")";
@@ -143,10 +146,8 @@ public class LectordeArchivos {
 
 
         /*------------------------------------------------Simular AFD-------------------------------------*/
-        /*Lo que se hace es, teniendo un ArrayList de NodosRamas, se le es alimentado cada uno de los caracteres de
-        * un string y se va moviendo de nodo en nodo hasta que se acaba el string, siendo el ultimo nodo de llegada el
-        * resultado de ese string dentro del automata y, viendo el contenido de ese nodo, podemos verificar si es un nodo
-        * de aceptacion, ergo el string es aceptado, o si este string no es aceptado por dicho automata*/
+        /*Lo que viene a continuación es el laboratorio 7 de compiladores en donde se desmenuza la parte de tokens para
+        ver si su sintaxis es correcta o no. Ademas de ello, se generan las expresiones regulares en  */
     }
 
 
@@ -188,13 +189,19 @@ public class LectordeArchivos {
         String entrega = "";
         while(!bandera && !token.isEmpty()){
             switch (token.peek()){
-                case("\'"):
-                case("\""):
+                case("\'"):{
+                    parteDelToken.add(token.pop());
+                    break;
+                }
+                case("\""):{
+                    parteDelToken.add(token.pop());
+                    break;
+                }
                 case("="):
                 case("."):
                 case("|"):
-                case("("):
-                case(")"):
+                case("«"):
+                case("»"):
                 case("{"):
                 case("}"):
                 case("["):
@@ -228,6 +235,11 @@ public class LectordeArchivos {
     }
 
     public boolean symbol(){
+        if(lookahead.getId().equals("«") || lookahead.getId().equals("»")){
+            match(lookahead.getId());
+            return true;
+        }
+
         if(simularAFD(Symbol, lookahead.getId())){
             match(lookahead.getId());
             return true;
@@ -383,6 +395,7 @@ public class LectordeArchivos {
         int numeroCharacters = 0;
         int numeroKeywords = 0;
         int numeroTokens = 0;
+        int numeroIgnore = 0;
         for(int s = 0; s<lineas.size(); s++){
             StringTokenizer lineaALeer = new StringTokenizer(lineas.get(s));
             String laPrueba = lineaALeer.nextToken();
@@ -395,6 +408,10 @@ public class LectordeArchivos {
             else if(laPrueba.equals("TOKENS")){
                 numeroTokens = s + 1;
             }
+            else if(laPrueba.equals("IGNORE")){
+                numeroIgnore = s;
+
+            }
 
         }
 
@@ -402,7 +419,14 @@ public class LectordeArchivos {
         /*Verificar si existen las palabras reservadas, simular si esta correcto lo que se puso debajo de ellas */
         if(numeroCharacters != 0 && numeroKeywords == 0 && numeroTokens == 0){
             /*Solo se encontro la palabra CHARACTERS*/
-            for(int i = numeroCharacters;i < lineas.size()-2; i++ ){
+            int tope = 0;
+            if(numeroIgnore != 0 ){
+                tope = numeroIgnore;
+            }else if(numeroIgnore == 0){
+                tope = lineas.size() -1;
+            }
+
+            for(int i = numeroCharacters;i < tope; i++ ){
                 boolean sintaxis = true;
                 String lineaConPunto = lineas.get(i);
                 lineaConPunto = lineaConPunto.replaceAll("\\s+","");
@@ -443,7 +467,14 @@ public class LectordeArchivos {
 
         }else if(numeroCharacters == 0 && numeroKeywords != 0 && numeroTokens == 0){
             /*Solo se encontro la palabra KEYWORDS*/
-            for(int i = numeroKeywords; i < lineas.size()-2; i++){
+
+            int tope = 0;
+            if(numeroIgnore != 0 ){
+                tope = numeroIgnore;
+            }else if(numeroIgnore == 0){
+                tope = lineas.size() -1;
+            }
+            for(int i = numeroKeywords; i < tope; i++){
                 boolean sintaxis = true;
                 String lineaConPunto = lineas.get(i);
                 lineaConPunto = lineaConPunto.replaceAll("\\s+","");
@@ -511,7 +542,13 @@ public class LectordeArchivos {
 
 
                 }
-                for(int i = numeroKeywords; i< lineas.size()-1; i++){
+                int tope = 0;
+                if(numeroIgnore != 0 ){
+                    tope = numeroIgnore;
+                }else if(numeroIgnore == 0){
+                    tope = lineas.size() -1;
+                }
+                for(int i = numeroKeywords; i< tope; i++){
 
                     boolean sintaxis = true;
                     String lineaConPunto = lineas.get(i);
@@ -537,11 +574,11 @@ public class LectordeArchivos {
             }
         }else if(numeroCharacters == 0 && numeroKeywords == 0 && numeroTokens != 0){
             /*Se encuentra la palabra TOKEN pero no ninguna de las anteriores*/
-            System.out.println("Syntax Error: Tokens must depend on CHARACTERS");
+            System.err.println("Syntax Error: Tokens must depend on CHARACTERS");
 
         }else if(numeroCharacters == 0 && numeroKeywords != 0 && numeroTokens != 0){
             /*Se encuentra la palabra KEYWORDS y TOKENS*/
-            System.out.println("Syntax Error: Tokens must depend on CHARACTERS");
+            System.err.println("Syntax Error: Tokens must depend on CHARACTERS");
 
 
         }else if(numeroCharacters != 0 && numeroKeywords == 0 && numeroTokens != 0){/*--------------------------------*/
@@ -582,8 +619,13 @@ public class LectordeArchivos {
                 }
 
             }
-
-            for(int i = numeroTokens; i< lineas.size()-1; i++){
+            int tope = 0;
+            if(numeroIgnore != 0 ){
+                tope = numeroIgnore;
+            }else if(numeroIgnore == 0){
+                tope = lineas.size() -1;
+            }
+            for(int i = numeroTokens; i< tope; i++){
                 numeroDeLinea = i;
                 TokenDecl(lineas.get(i));
 
@@ -658,12 +700,42 @@ public class LectordeArchivos {
 
 
                 }
-                for (int i = numeroTokens; i <  lineas.size()-1; i++){
+                int tope = 0;
+                if(numeroIgnore != 0 ){
+                    tope = numeroIgnore;
+                }else if(numeroIgnore == 0){
+                    tope = lineas.size() -1;
+                }
+                for (int i = numeroTokens; i < tope; i++){
                     numeroDeLinea  = i ;
                     TokenDecl(lineas.get(i));
 
+
                 }
-                System.out.println(estructuraTokens);
+
+                String lostokencitos = "";
+                for(ArrayList<String> Ttokens: estructuraTokens){
+                    ArrayList<String> tokens = deconvertidor(Ttokens);
+                    for(String s: tokens){
+                        if(!s.equals("=") && !s.equals("")){
+                            lostokencitos = lostokencitos + s + ",";
+                        }
+                    }
+                    lostokencitos = lostokencitos + "\n";
+                }
+
+                try {
+
+                    PrintWriter writer = new PrintWriter("TokensEstructurados.txt");
+                    writer.println(lostokencitos);
+                    writer.close();
+
+                } catch (Exception e) {
+
+                    e.printStackTrace();
+
+                }
+
             }
         }
 
@@ -689,6 +761,84 @@ public class LectordeArchivos {
 
         return resultado;
     }
+
+    public ArrayList<String> convertidor(ArrayList<String> lineas){
+        ArrayList<String> resultado = new ArrayList<>();
+        for(String S: lineas){
+            String dot = S.substring(S.length() -1, S.length());
+            String s;
+            if(dot.equals(".")){
+                s = S.substring(0, S.length()-1);
+            }else{
+                s = S;
+            }
+            String temporal = "";
+            for(int i = 0; i < s.length(); i++){
+                if(s.substring(i, i+1).equals("+")){
+                    temporal = temporal + "┼";
+                }else if(s.substring(i, i+1).equals(".")){
+                    temporal = temporal + "Æ";
+                }else if(s.substring(i, i+1).equals("(")){
+                    temporal = temporal + "«";
+                }else if(s.substring(i, i+1).equals(")")){
+                    temporal = temporal + "»";
+                }
+                else{
+                    temporal = temporal + s.substring(i, i+1);
+
+                }
+            }
+            if(dot.equals(".")){
+                temporal = temporal + ".";
+            }
+
+            resultado.add(temporal);
+        }
+        return resultado;
+    }
+
+    public ArrayList<String> deconvertidor(ArrayList<String> lineas){
+        ArrayList<String> resultado = new ArrayList<>();
+        for(String S: lineas){
+            String s;
+            String dot = "";
+            if(S.length() > 1){
+                dot = S.substring(S.length() -1, S.length());
+                if(dot.equals(".")){
+                    s = S.substring(0, S.length()-1);
+                }else{
+                    s = S;
+                }
+            }else{
+                s = S;
+            }
+
+            String temporal = "";
+            for(int i = 0; i < s.length(); i++){
+                if(s.substring(i, i+1).equals("┼")){
+                    temporal = temporal + "+";
+                }else if(s.substring(i, i+1).equals("Æ")){
+                    temporal = temporal + ".";
+                }else if(s.substring(i, i+1).equals("«")){
+                    temporal = temporal + "(";
+                }else if(s.substring(i, i+1).equals("»")){
+                    temporal = temporal + ")";
+                }
+                else{
+                    temporal = temporal + s.substring(i, i+1);
+
+                }
+            }
+            if(dot.equals(".")){
+                temporal = temporal + ".";
+            }
+
+            resultado.add(temporal);
+        }
+        return resultado;
+    }
+
+
 
 
 

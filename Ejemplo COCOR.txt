@@ -4,7 +4,7 @@ CHARACTERS
 
 letter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".
 digit = "0123456789".
-hexdigit = digit ~ "ABCDEF".
+hexdigit = digit + "ABCDEF".
 
 
 KEYWORDS
@@ -14,6 +14,10 @@ while="while".
 
 TOKENS
 
+id = letter{letter}.
+number = digit{digit}.
 hexnumber = hexdigit{hexdigit}"(H)".
+
+IGNORE lf + cr + tab
 
 END Ejemplo.
