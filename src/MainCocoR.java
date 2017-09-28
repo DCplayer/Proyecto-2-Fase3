@@ -68,6 +68,7 @@ public class MainCocoR {
         ArrayList<ArrayList<String>> EstructurasParaTokens = new ArrayList<>();
         LectordeArchivos investigador = new LectordeArchivos();
         ArrayList<ArrayList<NodosRamas>> automatas = new ArrayList<>();
+        ArrayList<ArrayList<String>> keywords = new ArrayList<>();
 
         Scanner scanner = new Scanner(System.in);
         System.out.println("Ingrese el nombre del archivo con el código que desea lexear: ");
@@ -123,6 +124,7 @@ public class MainCocoR {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println(lineasAImprimir);
 
 
         try(BufferedReader CreadorDeRegex = new BufferedReader(new FileReader("tokens.txt"))){
@@ -228,11 +230,29 @@ public class MainCocoR {
                 lectura = CreadorDeEstructuras.readLine();
             }
             EstructurasParaTokens.remove(EstructurasParaTokens.size()-1);
-            System.out.println(EstructurasParaTokens);
 
 
 
             CreadorDeEstructuras.close();
+        }catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        try(BufferedReader numeroDeKeyWords = new BufferedReader(new FileReader("NumeroKeywords.txt"))){
+            numeroDeKeyWords.mark(1000);
+            int numero = Integer.parseInt(numeroDeKeyWords.readLine());
+            ArrayList<ArrayList<String>> temporalisimo = new ArrayList<>();
+            for(int i = conocidos.size() - numero; i < conocidos.size(); i++ ){
+                temporalisimo.add(conocidos.get(i));
+            }
+            System.out.println(temporalisimo);
+            keywords = temporalisimo;
+
+            System.out.println(EstructurasParaTokens);
+
         }catch (FileNotFoundException e) {
             e.printStackTrace();
         }catch (IOException e) {
@@ -255,7 +275,6 @@ public class MainCocoR {
 
 
         }
-        System.out.println(conocidos);
 
 
         try(BufferedReader CreadorDeTokensFinales = new BufferedReader(new FileReader("Ingreso.txt"))){
@@ -268,14 +287,30 @@ public class MainCocoR {
                     System.out.println(siguiente);
                     boolean encontrado = false;
                     int indice = 0;
-                    System.out.println(automatas.size());
                     for(ArrayList<NodosRamas> automaton: automatas){
+                        for(ArrayList<String> s: keywords){
+                            if(siguiente.equals(s.get(0))){
+                                encontrado = true;
+                                System.out.println("<" + s.get(1) + ">");
+                                break;
+
+                            }
+                            if(encontrado){
+                                break;
+                            }
+
+                        }
+
                         if(investigador.simularAFD(automaton, siguiente)){
                             encontrado = true;
                             System.out.println("<" + EstructurasParaTokens.get(indice).get(0) + ">");
+                            break;
 
                         }
                         indice = indice +1;
+                        if(encontrado){
+                            break;
+                        }
                     }
                     if(!encontrado){
                         System.out.println("El token " + siguiente + " no se pudo identificar como Token");
@@ -295,7 +330,7 @@ public class MainCocoR {
             e.printStackTrace();
         }
 
-        System.out.println(lineasAImprimir);
+
 
 
 

@@ -329,6 +329,9 @@ public class LectordeArchivos {
         while (index < s.length()){
             String substri = s.substring(index, index+1);
             int numero = elNodo.getTransiciones().indexOf(substri);
+            if(numero == -1){
+                return false;
+            }
             NodosRamas resul = elNodo.getArrivals().get(numero);
             for(NodosRamas i: listaDeAFD){
                 if(i.getConjunto().equals(resul.getConjunto())){
