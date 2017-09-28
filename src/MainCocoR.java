@@ -43,6 +43,18 @@ public class MainCocoR {
             creador.CreateNewTokenFile();
         }
 
+        try {
+
+            PrintWriter writer = new PrintWriter("NumeroKeywords.txt");
+            writer.println(lector.getCantidadKeywords());
+            writer.close();
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+        }
+
         try (BufferedReader lectorTokens = new BufferedReader(new FileReader("tokens.txt"))){
             while(!(lectorTokens.readLine() == null)){
 
@@ -184,6 +196,27 @@ public class MainCocoR {
                             verificacion = true;
                             break;
                         }
+                        else if(identification.equals("{")){
+                            expresionRegular = expresionRegular + "(";
+                            verificacion = true;
+                            break;
+
+                        }else if(identification.equals("}")){
+                            expresionRegular = expresionRegular + ")*";
+                            verificacion = true;
+                            break;
+
+                        }else if(identification.equals("[")){
+                            expresionRegular = expresionRegular + "(" ;
+                            verificacion = true;
+                            break;
+
+                        }else if(identification.equals("]")){
+                            expresionRegular = expresionRegular + ")";
+                            verificacion = true;
+                            break;
+
+                        }
 
                     }
                     if(!verificacion){
@@ -222,17 +255,20 @@ public class MainCocoR {
 
 
         }
+        System.out.println(conocidos);
 
 
-        try(BufferedReader CreadorDeTokensFinales = new BufferedReader(new FileReader("tokens.txt"))){
+        try(BufferedReader CreadorDeTokensFinales = new BufferedReader(new FileReader("Ingreso.txt"))){
             CreadorDeTokensFinales.mark(1000);
             String lineal = CreadorDeTokensFinales.readLine();
             while (lineal != null){
                 StringTokenizer st = new StringTokenizer(lineal);
                 while(st.hasMoreTokens()){
                     String siguiente = st.nextToken();
+                    System.out.println(siguiente);
                     boolean encontrado = false;
                     int indice = 0;
+                    System.out.println(automatas.size());
                     for(ArrayList<NodosRamas> automaton: automatas){
                         if(investigador.simularAFD(automaton, siguiente)){
                             encontrado = true;
@@ -244,6 +280,7 @@ public class MainCocoR {
                     if(!encontrado){
                         System.out.println("El token " + siguiente + " no se pudo identificar como Token");
                     }
+
                 }
 
 

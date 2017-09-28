@@ -32,7 +32,8 @@ public class LectordeArchivos {
     private ArrayList<String> parteDelToken = new ArrayList<>();
     private ArrayList<ArrayList<String>> estructuraTokens = new ArrayList<>();
 
-    private boolean comillas = false;
+    private int cantidadKeywords = 0;
+
 
 
     public LectordeArchivos(){
@@ -414,6 +415,8 @@ public class LectordeArchivos {
             }
 
         }
+       cantidadKeywords = numeroTokens - numeroKeywords - 1;
+
 
         boolean soloChequeando = true;
         /*Verificar si existen las palabras reservadas, simular si esta correcto lo que se puso debajo de ellas */
@@ -836,6 +839,10 @@ public class LectordeArchivos {
             resultado.add(temporal);
         }
         return resultado;
+    }
+
+    public int getCantidadKeywords(){
+        return cantidadKeywords;
     }
 
 
