@@ -16,9 +16,10 @@ number = digit{digit}.
 hexnumber = hexdigit{hexdigit}"(H)".
 
 PRODUCTIONS
-E<.hola.>(.adios.) = T É .
+E = T É .
 É = + T É | #.
-T = F TP | #.
+T = F TP.
+TP = *F TP | #.
 F = ( E ) | id.
 
 

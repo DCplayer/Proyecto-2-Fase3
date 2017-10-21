@@ -55,7 +55,8 @@ public class LectordeArchivos {
         String numberRegex = "(" + digit+ ")"  + "(" + digit+ ")" + "*";
         String stringRegex = "\"" + "(" + letter + "|" + digit + "|" + butQuote + ")*" + "\"";
         String charRegex = "\'(" + letter + "|" + digit + "|" + butApostrophw +")\'";
-        String any = "(( "+ letter+" )|( "+ digit +")|( "+butApostrophw + ")(" + butQuote+ "))*";
+
+        String any = "("+butApostrophw + ")";
 
         String CharRegex = "(" + charRegex  +")|(CHR(" + numberRegex + "))";
         String BasicSetRegex = "(" + stringRegex + ")|(" + identRegex + ")|((" + CharRegex + ")|(" + CharRegex + "--" + CharRegex + "))";
@@ -381,6 +382,7 @@ public class LectordeArchivos {
                     parteDeLaProduccion.add(produccion.pop());
                     break;
                 }
+                case("×"):
                 case("Æ"):
                 case("┼"):
                 case(">"):
@@ -576,13 +578,39 @@ public class LectordeArchivos {
     }
 
     public boolean any(){
-        if(lookahead.getId().equals("Æ")){
-            return false;
+        switch (lookahead.getId()){
+            case("Æ"):
+                matchA(lookahead.getId());
+                return false;
+            case("("):
+            case(")"):
+            case("©"):
+            case("×"):
+            case("┼"):
+            case(">"):
+            case("<"):
+            case("="):
+            case("."):
+            case("|"):
+            case("«"):
+            case("»"):
+            case("{"):
+            case("}"):
+            case("["):
+            case("]"):
+            case("+"):
+            case("-"):
+                matchA(lookahead.getId());
+                return true;
+            default:
+                if(simularAFD(ident, lookahead.getId())){
+                    matchA(lookahead.getId());
+                    return true;
+
         }
 
-        if(simularAFD(ident, lookahead.getId())){
-            matchA(lookahead.getId());
-            return true;
+
+
         }
         return false;
     }
@@ -1151,6 +1179,8 @@ public class LectordeArchivos {
                     temporal = temporal + "»";
                 }else if(s.substring(i,i+1).equals("#")){
                     temporal = temporal + "©";
+                }else if(s.substring(i,i+1).equals("*")){
+                    temporal = temporal + "×";
                 }
                 else{
                     temporal = temporal + s.substring(i, i+1);
@@ -1194,6 +1224,8 @@ public class LectordeArchivos {
                     temporal = temporal + ")";
                 }else if(s.substring(i,i+1).equals("©")){
                     temporal = temporal + "#";
+                }else if(s.substring(i,i+1).equals("×")){
+                    temporal = temporal + "*";
                 }
                 else{
                     temporal = temporal + s.substring(i, i+1);
