@@ -1,5 +1,6 @@
 import com.sun.corba.se.impl.corba.ServerRequestImpl;
 import com.sun.java.util.jar.pack.*;
+import com.sun.org.apache.xpath.internal.Expression;
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader;
 import com.sun.xml.internal.ws.api.streaming.XMLStreamReaderFactory;
 
@@ -21,6 +22,7 @@ public class LectordeArchivos {
     private ArrayList<NodosRamas> Characters;
     private ArrayList<NodosRamas> Keywords;
     private ArrayList<NodosRamas> Symbol;
+    private ArrayList<NodosRamas> Any;
 
     private Stack<String> token = new Stack<>();
 
@@ -29,8 +31,12 @@ public class LectordeArchivos {
     public static int numeroDeLinea = 0;
     public static BufferedReader lectorTokens;
 
-    private ArrayList<String> parteDelToken = new ArrayList<>();
-    private ArrayList<ArrayList<String>> estructuraTokens = new ArrayList<>();
+    private ArrayList<String> parteDelToken = new ArrayList<>();                 //Cada Token procesado
+    private ArrayList<ArrayList<String>> estructuraTokens = new ArrayList<>();   //Conjunto de todos los Tokens
+
+    private ArrayList<String> parteDeLaProduccion = new ArrayList<>();                  //Cada una de las producciones
+    private ArrayList<ArrayList<String>> estructuraProducciones = new ArrayList<>();    //Conjunto de Producciones
+    private Stack<String> produccion = new Stack<>();
 
     private int cantidadKeywords = 0;
 
@@ -40,15 +46,16 @@ public class LectordeArchivos {
 
         /*-----------------------------Creacion de Expresiones Regulares----------------------------------------------*/
         String letter = "a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|A|B|C|D|E|F|G|H|I" +
-                "|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z";
+                "|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|É";
         String digit = "0|1|2|3|4|5|6|7|8|9";
-        String butQuote = "!|@|$|^|&|{|}|[|]|\'|>|<|;|:|_|,|-|æ|Æ|┼|\\|«|»|~";
-        String butApostrophw = "!|@|$|^|&|{|}|[|]|\"|>|<|;|:|_|,|-|æ|Æ|┼|\\|«|»|~";
+        String butQuote = "!|@|$|^|&|{|}|[|]|\'|>|<|;|:|_|,|-|æ|Æ|┼|\\|«|»|~|©";
+        String butApostrophw = "!|@|$|^|&|{|}|[|]|\"|>|<|;|:|_|,|-|æ|Æ|┼|\\|«|»|~|©";
 
         String identRegex = "(" + letter+ ")"+ "(" + letter + "|" + digit + ")*";
         String numberRegex = "(" + digit+ ")"  + "(" + digit+ ")" + "*";
         String stringRegex = "\"" + "(" + letter + "|" + digit + "|" + butQuote + ")*" + "\"";
         String charRegex = "\'(" + letter + "|" + digit + "|" + butApostrophw +")\'";
+        String any = "(( "+ letter+" )|( "+ digit +")|( "+butApostrophw + ")(" + butQuote+ "))*";
 
         String CharRegex = "(" + charRegex  +")|(CHR(" + numberRegex + "))";
         String BasicSetRegex = "(" + stringRegex + ")|(" + identRegex + ")|((" + CharRegex + ")|(" + CharRegex + "--" + CharRegex + "))";
@@ -67,11 +74,22 @@ public class LectordeArchivos {
         * especificada en la parte de arriba, y dejando cada uno de los NodosRamas con sus transiciones y nodos a donde
         * llegan con esas transiciones dentro de un Array, el cual es lo que se inicializa cada vez que se usa el
         * LectordeArchivos.java*/
+        /*Automata Any servira para la parte de productions*/
+        Arbol arbolAny = new Arbol();
+        ArrayList<NodosRamas> Any = arbolAny.CrearElAFDDirecto(any);
+        int numeroParaElID = 0;
+
+        for(NodosRamas nodoRama: Any){
+            nodoRama.setId(numeroParaElID);
+            numeroParaElID = numeroParaElID + 1;
+        }
+        this.Any = Any;
+
 
         /*Automata ident*/
         Arbol arbolIdent = new Arbol();
         ArrayList<NodosRamas> ident = arbolIdent.CrearElAFDDirecto(identRegex);
-        int numeroParaElID = 0;
+        numeroParaElID = 0;
 
         for(NodosRamas nodoRama: ident){
             nodoRama.setId(numeroParaElID);
@@ -198,6 +216,9 @@ public class LectordeArchivos {
                     parteDelToken.add(token.pop());
                     break;
                 }
+                case("┼"):
+                case(">"):
+                case("<"):
                 case("="):
                 case("."):
                 case("|"):
@@ -286,11 +307,11 @@ public class LectordeArchivos {
         if(symbol()){
            return true;
         }
-        else if(match("(")){
+        else if(match("«")){
             if(!TokenExpr()){
                 System.out.println("Syntax Error: Not a TokenExpr, linea " + numeroDeLinea + " de codigo escrito");
             }
-            if(!match(")")){
+            if(!match("»")){
                 System.out.println("Syntax Error: Expected \")\" en linea " + numeroDeLinea+ " de codigo escrito");
             }
             return true;
@@ -319,7 +340,273 @@ public class LectordeArchivos {
 
     }
 
-    /*-----------------------------------------------------------------------------------------------------------------*/
+
+
+    /*--PRODUCTIONS---------------------------------------------------------------------------------------------------*/
+    public void ParserSpecification(String Production){
+        parteDeLaProduccion.clear();
+        produccion.clear();
+        String nolinea = Production.replaceAll("\\s+","");
+        String linea = nolinea.substring(0,nolinea.length()-1);
+        String dot = nolinea.substring(nolinea.length()-1, nolinea.length());
+        if(!dot.equals(".")){
+            System.out.println("Syntax Error: Exprected \".\" in line " + numeroDeLinea + " of written code");
+        }
+        for(int i = linea.length()-1; i >= 0; i--){
+            String s = linea.substring(i, i+1);
+            produccion.push(s);
+        }
+        getNextProduct();
+        production();
+
+        parteDeLaProduccion.add(".");
+        ArrayList<String> remplazo = new ArrayList<>();
+        remplazo.addAll(parteDeLaProduccion);
+        estructuraProducciones.add(remplazo);
+
+
+
+    }
+
+    public void getNextProduct(){
+        boolean bandera = false;
+        String entrega = "";
+        while(!bandera && !produccion.isEmpty()){
+            switch (produccion.peek()){
+                case("\'"):{
+                    parteDeLaProduccion.add(produccion.pop());
+                    break;
+                }
+                case("\""):{
+                    parteDeLaProduccion.add(produccion.pop());
+                    break;
+                }
+                case("Æ"):
+                case("┼"):
+                case(">"):
+                case("<"):
+                case("="):
+                case("."):
+                case("|"):
+                case("«"):
+                case("»"):
+                case("{"):
+                case("}"):
+                case("["):
+                case("]"):
+                case("+"):
+                case("-"):{
+                    bandera = true;
+                    if(entrega.equals("")){
+                        entrega = produccion.pop();
+
+                    }
+                    break;
+                }
+                default:{
+                    entrega = entrega + produccion.pop();
+                }
+            }
+        }
+        parteDeLaProduccion.add(entrega);
+        lookahead.setId(entrega);
+    }
+
+    public boolean production(){
+
+        identA();
+
+        if(atribute()){
+            if(semaction()){
+
+            }
+
+        }else if(semaction()){
+
+
+        }
+        if(!matchA("=")){
+            System.out.println("Production not accepted: Missing \"=\" in line " + numeroDeLinea+" of written code");
+            return false;
+        }
+        if(!expression()){
+            System.out.println("Production not accepted: Missing Expression in line " + numeroDeLinea+" of written code" );
+            return false;
+
+
+
+        }
+
+        return true;
+
+
+    }
+
+    public boolean expression(){
+        if(!term()){
+            System.out.println("Production not accepted: Missing Term in line " +numeroDeLinea + " of written code");
+            return false;
+        }
+        while(matchA("|")){
+            if(!term()){
+                System.out.println("Production not accepted: Missing Term in line " +numeroDeLinea + " of written code");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean term(){
+        if(!factor()){
+            System.out.println("Production not accepted: Not a factor in line " + numeroDeLinea+ " of written code");
+            return false;
+        }
+        while(factor()){
+
+        }
+        return true;
+
+    }
+
+    public boolean factor(){
+        if(any()){
+            if(atribute()){
+
+            }
+            return true;
+        }
+        else if(matchA("«")){
+            if(!expression()){
+                System.out.println("Syntax Error: Not a Production, line  " + numeroDeLinea + " of written code");
+            }
+            if(!matchA("»")){
+                System.out.println("Syntax Error: Expected \")\" on line " + numeroDeLinea+ " of written code");
+            }
+            return true;
+        }
+        else if(matchA("{")){
+            if(!expression()){
+                System.out.println("Syntax Error: Not a Production, line " + numeroDeLinea + " of written code");
+            }
+            if(!matchA("}")){
+                System.out.println("Syntax Error: Expected \"}\" on line " + numeroDeLinea+ " of written code");
+            }
+            return true;
+        }
+        else if(matchA("[")){
+            if(!expression()){
+                System.out.println("Syntax Error: Not a Production, line " + numeroDeLinea + " of written code");
+            }
+            if(!matchA("]")){
+                System.out.println("Syntax Error: Expected \"]\" on line " + numeroDeLinea+ " of written code");
+            }
+            return true;
+        }
+        else if(semaction()){
+            return true;
+
+        }
+        else{
+            return false;
+        }
+    }
+
+    public boolean atribute(){
+        if(!matchA("<")){
+            System.out.println("Syntax Error: Missing \"<\" on line " + numeroDeLinea + " of written code, not an " +
+                    "Atribute");
+            return false;
+
+        }
+        if(!matchA("Æ")){
+            System.out.println("Syntax Error: Missing \".\" on line " + numeroDeLinea + " of written code, not an " +
+                    "Atribute");
+            return false;
+        }
+
+        while(any()){
+
+        }
+
+
+        if(!matchA("Æ")){
+            System.out.println("Syntax Error: Missing \".\" on line " + numeroDeLinea + " of written code, not an " +
+                    "Atribute");
+            return false;
+        }
+        if(!matchA(">")){
+            System.out.println("Syntax Error: Missing \">\" on line " + numeroDeLinea + "of written code, not an " +
+                    "Atribute");
+            return false;
+        }
+
+        return true;
+
+    }
+
+    public boolean semaction(){
+        if(!matchA("«")){
+            System.out.println("Syntax Error: Missing \"(\" on line " + numeroDeLinea + " of written code, not a " +
+                    "SemAction");
+            return false;
+
+        }
+        if(!matchA("Æ")){
+            System.out.println("Syntax Error: Missing \".\" on line " + numeroDeLinea + " of written code, not a " +
+                    "SemAction");
+            return false;
+        }
+
+        while(any()){
+
+        }
+
+        if(!matchA("Æ")){
+            System.out.println("Syntax Error: Missing \".\" on line " + numeroDeLinea + "of written code, not a " +
+                    "SemAction");
+            return false;
+        }
+        if(!matchA("»")){
+            System.out.println("Syntax Error: Missing \")\" on line " + numeroDeLinea + " of written code, not a " +
+                    "SemAction");
+            return false;
+        }
+
+        return true;
+    }
+
+    public boolean any(){
+        if(lookahead.getId().equals("Æ")){
+            return false;
+        }
+
+        if(simularAFD(ident, lookahead.getId())){
+            matchA(lookahead.getId());
+            return true;
+        }
+        return false;
+    }
+
+    public boolean matchA(String terminal){
+        if(lookahead.getId().equals(terminal)){
+            getNextProduct();
+            return true;
+        }
+        return false;
+    }
+
+    public void identA(){
+        if(simularAFD(ident, lookahead.getId())){
+            matchA(lookahead.getId());
+        }
+        else{
+            System.out.println("Syntax Error: linea de codigo " + numeroDeLinea + " con identificador invalido");
+        }
+    }
+
+
+
+    /*----------------------------------------------------------------------------------------------------------------*/
 
     public boolean simularAFD(ArrayList<NodosRamas> listaDeAFD, String s){
 
@@ -372,6 +659,7 @@ public class LectordeArchivos {
     }
 
 
+
     /*-------------------------------------------ChequearSintaxisDelArchivo--------------------------------------------*/
     public boolean chequearSintaxis(ArrayList<String> lineas){
 
@@ -400,6 +688,7 @@ public class LectordeArchivos {
         int numeroKeywords = 0;
         int numeroTokens = 0;
         int numeroIgnore = 0;
+        int numeroProduct = 0;
         for(int s = 0; s<lineas.size(); s++){
             StringTokenizer lineaALeer = new StringTokenizer(lineas.get(s));
             String laPrueba = lineaALeer.nextToken();
@@ -415,6 +704,8 @@ public class LectordeArchivos {
             else if(laPrueba.equals("IGNORE")){
                 numeroIgnore = s;
 
+            }else if(laPrueba.equals("PRODUCTIONS")){
+                numeroProduct = s;
             }
 
         }
@@ -422,14 +713,26 @@ public class LectordeArchivos {
 
 
         boolean soloChequeando = true;
+
         /*Verificar si existen las palabras reservadas, simular si esta correcto lo que se puso debajo de ellas */
         if(numeroCharacters != 0 && numeroKeywords == 0 && numeroTokens == 0){
             /*Solo se encontro la palabra CHARACTERS*/
+
+            //Metodo para revisar hasta donde debe de leer, si en dado caso existen las palabras reservadas
+            //IGNORE O PRODUCTIONS
             int tope = 0;
-            if(numeroIgnore != 0 ){
-                tope = numeroIgnore;
-            }else if(numeroIgnore == 0){
-                tope = lineas.size() -1;
+            switch(numeroIgnore){
+                case 0:
+                    switch (numeroProduct){
+                        case 0:
+                            tope = lineas.size()-1;
+                            break;
+                        default:
+                            tope = numeroProduct;
+                    }
+                    break;
+                default:
+                    tope = numeroIgnore;
             }
 
             for(int i = numeroCharacters;i < tope; i++ ){
@@ -474,12 +777,23 @@ public class LectordeArchivos {
         }else if(numeroCharacters == 0 && numeroKeywords != 0 && numeroTokens == 0){
             /*Solo se encontro la palabra KEYWORDS*/
 
+            //Metodo para revisar hasta donde debe de leer, si en dado caso existen las palabras reservadas
+            //IGNORE O PRODUCTIONS
             int tope = 0;
-            if(numeroIgnore != 0 ){
-                tope = numeroIgnore;
-            }else if(numeroIgnore == 0){
-                tope = lineas.size() -1;
+            switch(numeroIgnore){
+                case 0:
+                    switch (numeroProduct){
+                        case 0:
+                            tope = lineas.size()-1;
+                            break;
+                        default:
+                            tope = numeroProduct;
+                    }
+                    break;
+                default:
+                    tope = numeroIgnore;
             }
+
             for(int i = numeroKeywords; i < tope; i++){
                 boolean sintaxis = true;
                 String lineaConPunto = lineas.get(i);
@@ -548,12 +862,23 @@ public class LectordeArchivos {
 
 
                 }
+                //Metodo para revisar hasta donde debe de leer, si en dado caso existen las palabras reservadas
+                //IGNORE O PRODUCTIONS
                 int tope = 0;
-                if(numeroIgnore != 0 ){
-                    tope = numeroIgnore;
-                }else if(numeroIgnore == 0){
-                    tope = lineas.size() -1;
+                switch(numeroIgnore){
+                    case 0:
+                        switch (numeroProduct){
+                            case 0:
+                                tope = lineas.size()-1;
+                                break;
+                            default:
+                                tope = numeroProduct;
+                        }
+                        break;
+                    default:
+                        tope = numeroIgnore;
                 }
+
                 for(int i = numeroKeywords; i< tope; i++){
 
                     boolean sintaxis = true;
@@ -625,12 +950,23 @@ public class LectordeArchivos {
                 }
 
             }
+            //Metodo para revisar hasta donde debe de leer, si en dado caso existen las palabras reservadas
+            //IGNORE O PRODUCTIONS
             int tope = 0;
-            if(numeroIgnore != 0 ){
-                tope = numeroIgnore;
-            }else if(numeroIgnore == 0){
-                tope = lineas.size() -1;
+            switch(numeroIgnore){
+                case 0:
+                    switch (numeroProduct){
+                        case 0:
+                            tope = lineas.size()-1;
+                            break;
+                        default:
+                            tope = numeroProduct;
+                    }
+                    break;
+                default:
+                    tope = numeroIgnore;
             }
+
             for(int i = numeroTokens; i< tope; i++){
                 numeroDeLinea = i;
                 TokenDecl(lineas.get(i));
@@ -706,12 +1042,23 @@ public class LectordeArchivos {
 
 
                 }
+                //Metodo para revisar hasta donde debe de leer, si en dado caso existen las palabras reservadas
+                //IGNORE O PRODUCTIONS
                 int tope = 0;
-                if(numeroIgnore != 0 ){
-                    tope = numeroIgnore;
-                }else if(numeroIgnore == 0){
-                    tope = lineas.size() -1;
+                switch(numeroIgnore){
+                    case 0:
+                        switch (numeroProduct){
+                            case 0:
+                                tope = lineas.size()-1;
+                                break;
+                            default:
+                                tope = numeroProduct;
+                        }
+                        break;
+                    default:
+                        tope = numeroIgnore;
                 }
+
                 for (int i = numeroTokens; i < tope; i++){
                     numeroDeLinea  = i ;
                     TokenDecl(lineas.get(i));
@@ -744,6 +1091,20 @@ public class LectordeArchivos {
 
             }
         }
+
+
+        if(numeroProduct !=0){
+            for(int i = numeroProduct +1; i < lineas.size()-1; i++){
+                numeroDeLinea = i;
+                ParserSpecification(lineas.get(i));
+                System.out.println(i);
+                System.out.println(lineas.get(i));
+
+
+            }
+        }
+
+        System.out.println(estructuraProducciones);
 
 
 
@@ -788,6 +1149,8 @@ public class LectordeArchivos {
                     temporal = temporal + "«";
                 }else if(s.substring(i, i+1).equals(")")){
                     temporal = temporal + "»";
+                }else if(s.substring(i,i+1).equals("#")){
+                    temporal = temporal + "©";
                 }
                 else{
                     temporal = temporal + s.substring(i, i+1);
@@ -829,6 +1192,8 @@ public class LectordeArchivos {
                     temporal = temporal + "(";
                 }else if(s.substring(i, i+1).equals("»")){
                     temporal = temporal + ")";
+                }else if(s.substring(i,i+1).equals("©")){
+                    temporal = temporal + "#";
                 }
                 else{
                     temporal = temporal + s.substring(i, i+1);
@@ -847,6 +1212,8 @@ public class LectordeArchivos {
     public int getCantidadKeywords(){
         return cantidadKeywords;
     }
+
+    public void first(){}
 
 
 

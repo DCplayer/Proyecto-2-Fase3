@@ -1,16 +1,25 @@
 COMPILER Test
 
 CHARACTERS
-  letter  = 'A'..'Z' + 'a'..'z'.
-  digit   = '0'..'9'.
+
+letter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".
+digit = "0123456789".
+hexdigit = digit+"ABCDEF".
+
+KEYWORDS
+if="if".
+while="while".
 
 TOKENS
-  ident  = letter {letter | digit}.
-  ident1 = letter {digit} letter.
-  number = digit {digit} | digit {digit} "..".
-  S1 = "+" "+".
-  S2 = "++".
-  S3 = '+' '+'.
-  X1 = "123..".
+id = letter{letter}.
+number = digit{digit}.
+hexnumber = hexdigit{hexdigit}"(H)".
+
+PRODUCTIONS
+E<.hola.>(.adios.) = T É .
+É = + T É | #.
+T = F TP | #.
+F = ( E ) | id.
+
 
 END Test.
