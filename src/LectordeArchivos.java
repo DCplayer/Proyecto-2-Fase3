@@ -1132,6 +1132,13 @@ public class LectordeArchivos {
             }
         }
 
+
+
+
+        System.out.println(estructuraProducciones);
+        QuitandoOR(estructuraProducciones);
+        System.out.println(estructuraProducciones);
+        limpiarEspacios(estructuraProducciones);
         System.out.println(estructuraProducciones);
 
 
@@ -1155,6 +1162,77 @@ public class LectordeArchivos {
         }
 
         return resultado;
+    }
+
+    public void QuitandoOR(ArrayList<ArrayList<String >> estructura){
+        ArrayList<ArrayList<String>> remover = new ArrayList<>();
+        ArrayList<ArrayList<String>> implementar = new ArrayList<>();
+        for(ArrayList<String> s : estructura ){
+            ArrayList<Integer> posiciones = new ArrayList<>();
+            if(s.contains("|")){
+                int numeroPos = 0;
+                for(String string : s){
+                    if(string.equals("|")){
+                        posiciones.add(numeroPos);
+                    }
+                    numeroPos = numeroPos+1;
+                }
+                if(posiciones.size() > 0){
+                    int inicio = 2;
+                    int numeroDePos = 0;
+                    int tope = posiciones.get(numeroDePos);
+                    for(int x = 0; x < posiciones.size()+1; x++){
+                        ArrayList<String> temporal = new ArrayList<>();
+
+                        temporal.add(s.get(0));
+                        temporal.add(s.get(1));
+
+                        for(int i = inicio; i < tope; i++){
+                            temporal.add(s.get(i));
+                        }
+                        if(!temporal.get(temporal.size()-1).equals(".")){
+                            temporal.add(".");
+                        }
+
+                        implementar.add(temporal);
+
+                        inicio = tope +1;
+                        numeroDePos = numeroDePos +1;
+                        if(tope == s.size()-1){
+                            break;
+                        }
+                        else if(tope == posiciones.get(posiciones.size()-1)){
+                            tope = s.size()-1;
+                        }
+                        else{
+                            tope = posiciones.get(numeroDePos);
+                        }
+
+
+                    }
+                }
+
+               remover.add(s);
+
+            }
+        }
+        for(ArrayList<String> I: implementar){
+            estructuraProducciones.add(I);
+        }
+        for(ArrayList<String> R: remover){
+            estructuraProducciones.remove(R);
+        }
+
+    }
+
+    public void limpiarEspacios(ArrayList<ArrayList<String>> laestructura){
+        ArrayList<String > vacio = new ArrayList<>();
+        vacio.add("");
+        for(ArrayList<String> s: laestructura){
+            for (int i = 0; i < s.size(); i++){
+                s.removeAll(vacio);
+            }
+        }
     }
 
     public ArrayList<String> convertidor(ArrayList<String> lineas){
