@@ -1,5 +1,6 @@
 import com.sun.corba.se.impl.corba.ServerRequestImpl;
 import com.sun.java.util.jar.pack.*;
+import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.org.apache.xpath.internal.Expression;
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader;
 import com.sun.xml.internal.ws.api.streaming.XMLStreamReaderFactory;
@@ -8,10 +9,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Stack;
-import java.util.StringTokenizer;
+import java.util.*;
 
 public class LectordeArchivos {
 
@@ -41,6 +39,9 @@ public class LectordeArchivos {
     private int cantidadKeywords = 0;
 
     private ArrayList<String> abecedario = new ArrayList<>();
+    private ArrayList<ArrayList<String>> laBanca = new ArrayList<>();
+    private ArrayList<String> peticiones = new ArrayList<>();
+    private int numeroDePeticion = 0;
 
 
 
@@ -1166,10 +1167,19 @@ public class LectordeArchivos {
         estructuraProducciones.clear();
         estructuraProducciones.addAll(estructuraNueva);
 
+        destranscribir(estructuraProducciones);
+        System.out.println(estructuraProducciones);
+
 
         QuitandoOR(estructuraProducciones);
-        System.out.println("Esta es");
         System.out.println(estructuraProducciones);
+
+        System.out.println("Ingrese la Cadena que desea probar con FIRST y FOLLOW");
+        Scanner scanner = new Scanner(System.in);
+        String ausar = scanner.nextLine();
+        System.out.println("FIRST: ");
+        HashSet<String> resultante = first(ausar);
+        System.out.println(resultante);
 
 
 
@@ -1283,8 +1293,13 @@ public class LectordeArchivos {
         int numeroABC = 0;
         for(ArrayList<String> arr: armazon){
             if(arr.get(0).length() > 1){
+                ArrayList<String> suplente = new ArrayList<>();
+
                 String original = arr.get(0);
                 String cambio = abecedario.get(numeroABC);
+                suplente.add(original);
+                suplente.add(cambio);
+                laBanca.add(suplente);
 
                 arr.set(0, cambio);
                 for(ArrayList<String> arry: armazon){
@@ -1340,12 +1355,49 @@ public class LectordeArchivos {
 
     }
 
-    public void encontrado(String conocido){
-        ArrayList<String> contenidoFirsteno = new ArrayList<>();
+    //Regresa True si el string ingresado existe como un No-Terminal dentro de la gramatica
+    public boolean chequear(String s){
+        boolean respuesta = false;
+        for(ArrayList<String> i: estructuraProducciones){
+            if(i.get(0).equals(s)){
+                respuesta = true;
+                break;
+            }
+        }
+        return respuesta;
+
+    }
+
+    public HashSet<String> encontrado(String conocido){
+        HashSet<String> contenidoFirsteno = new HashSet<>();
         for(ArrayList<String> producciones: estructuraProducciones){
             if(producciones.get(0).equals(conocido)){
-                boolean chequeo = false;
+
                 String firstino = producciones.get(2);
+                if(chequear(firstino)){
+                    contenidoFirsteno.addAll(encontrado(firstino));
+                }
+                else{
+                    contenidoFirsteno.add(firstino);
+                }
+
+            }
+        }
+        if(contenidoFirsteno.size() == 0){
+            contenidoFirsteno.add(conocido);
+        }
+        return contenidoFirsteno;
+    }
+
+    public void destranscribir(ArrayList<ArrayList<String>> antes){
+        for(ArrayList<String> produccion: antes){
+            for(int i = 0; i< produccion.size(); i++){
+                String designado = produccion.get(i);
+                for(ArrayList<String> banca: laBanca){
+                    if(designado.equals(banca.get(1))){
+                        produccion.set(i, banca.get(0));
+                    }
+                }
             }
         }
     }
@@ -1438,17 +1490,44 @@ public class LectordeArchivos {
         return cantidadKeywords;
     }
 
-    public void first(){}
+    public HashSet<String> first(String peticion){
+        HashSet<String> resultado = new HashSet<>();
+        String item = "";
+        for(int i = 0; i < peticion.length(); i++){
+            String parte = peticion.substring(i, i+1);
+            if(!parte.equals(" ")){
+                item = item + parte;
+            }
+            else{
+                peticiones.add(item);
+                item = "";
+            }
+        }
+        peticiones.add(item);
+        boolean pruebaDeFuego = true;
+        while(pruebaDeFuego){
+            if(!chequear(peticiones.get(numeroDePeticion))){
+                resultado.add(peticiones.get(numeroDePeticion));
+            }
+            else{
+                resultado.addAll(encontrado(peticiones.get(numeroDePeticion)));
+            }
+
+
+            if(!resultado.contains("#") || numeroDePeticion > peticiones.size()-1){
+                pruebaDeFuego = false;
+            }
+
+            if(resultado.contains("#")){
+                resultado.remove("#");
+            }
+            numeroDePeticion = numeroDePeticion +1;
+        }
 
 
 
-
-
-
-
-
-
-
+        return resultado;
+    }
 
 
 }
