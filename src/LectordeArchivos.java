@@ -44,6 +44,7 @@ public class LectordeArchivos {
 
 
 
+
     public LectordeArchivos(){
 
         /*-----------------------------Creacion de Expresiones Regulares----------------------------------------------*/
@@ -1158,10 +1159,18 @@ public class LectordeArchivos {
         limpiarEspacios(estructuraProducciones);
         transcribir(estructuraProducciones);
         System.out.println(estructuraProducciones);
+
         ArrayList<ArrayList<String>> estructuraNueva = SepararNoTerminales(estructuraProducciones);
         System.out.println(estructuraNueva);
-        QuitandoOR(estructuraNueva);
-        System.out.println(estructuraNueva);
+
+        estructuraProducciones.clear();
+        estructuraProducciones.addAll(estructuraNueva);
+
+
+        QuitandoOR(estructuraProducciones);
+        System.out.println("Esta es");
+        System.out.println(estructuraProducciones);
+
 
 
 
@@ -1329,6 +1338,16 @@ public class LectordeArchivos {
         }
         return elRemplazo;
 
+    }
+
+    public void encontrado(String conocido){
+        ArrayList<String> contenidoFirsteno = new ArrayList<>();
+        for(ArrayList<String> producciones: estructuraProducciones){
+            if(producciones.get(0).equals(conocido)){
+                boolean chequeo = false;
+                String firstino = producciones.get(2);
+            }
+        }
     }
 
     public ArrayList<String> convertidor(ArrayList<String> lineas){
