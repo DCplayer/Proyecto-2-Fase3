@@ -40,6 +40,8 @@ public class LectordeArchivos {
 
     private int cantidadKeywords = 0;
 
+    private ArrayList<String> abecedario = new ArrayList<>();
+
 
 
     public LectordeArchivos(){
@@ -1140,6 +1142,9 @@ public class LectordeArchivos {
         System.out.println(estructuraProducciones);
         limpiarEspacios(estructuraProducciones);
         System.out.println(estructuraProducciones);
+        transcribir(estructuraProducciones);
+        System.out.println(estructuraProducciones);
+
 
 
 
@@ -1233,6 +1238,20 @@ public class LectordeArchivos {
                 s.removeAll(vacio);
             }
         }
+    }
+
+    public void transcribir(ArrayList<ArrayList<String>> estructurado){
+        int numeroPos = 0;
+        for(ArrayList<String> produccion: estructurado){
+            ArrayList<String> remplazo = deconvertidor(produccion);
+            estructurado.set(numeroPos, remplazo);
+            numeroPos  = numeroPos +1;
+        }
+
+    }
+
+    public void SepararNoTerminales(){
+
     }
 
     public ArrayList<String> convertidor(ArrayList<String> lineas){
