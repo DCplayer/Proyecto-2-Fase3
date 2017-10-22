@@ -70,7 +70,26 @@ public class LectordeArchivos {
         String SymbolRegex = "(" + identRegex + ")|(" + stringRegex + ")|(" + charRegex + ")" ;
 
         /*---------------------------------------------CreacionDirecta------------------------------------------------*/
-
+        abecedario.add("á");
+        abecedario.add("í");
+        abecedario.add("ó");
+        abecedario.add("ú");
+        abecedario.add("ñ");
+        abecedario.add("Ñ");
+        abecedario.add("ª");
+        abecedario.add("º");
+        abecedario.add("¿");
+        abecedario.add("®");
+        abecedario.add("¬");
+        abecedario.add("½");
+        abecedario.add("¼");
+        abecedario.add("¡");
+        abecedario.add("«");
+        abecedario.add("»");
+        abecedario.add("↑");
+        abecedario.add("▒");
+        abecedario.add("▓");
+        abecedario.add("│");
 
         /*Se tiene la creacion directa, por medio del algoritmo de Hopcroft, diseñado en las clases de Arbol, Ramas y
         * NodosRamas. Ahora lo que se esta haciendo es crear un Automata AFD directo de la expresion Regular
@@ -1136,14 +1155,15 @@ public class LectordeArchivos {
 
 
 
-
-        System.out.println(estructuraProducciones);
-        QuitandoOR(estructuraProducciones);
-        System.out.println(estructuraProducciones);
         limpiarEspacios(estructuraProducciones);
-        System.out.println(estructuraProducciones);
         transcribir(estructuraProducciones);
         System.out.println(estructuraProducciones);
+        ArrayList<ArrayList<String>> estructuraNueva = SepararNoTerminales(estructuraProducciones);
+        System.out.println(estructuraNueva);
+        QuitandoOR(estructuraNueva);
+        System.out.println(estructuraNueva);
+
+
 
 
 
@@ -1250,7 +1270,64 @@ public class LectordeArchivos {
 
     }
 
-    public void SepararNoTerminales(){
+    public ArrayList<ArrayList<String>> SepararNoTerminales(ArrayList<ArrayList<String>> armazon){
+        int numeroABC = 0;
+        for(ArrayList<String> arr: armazon){
+            if(arr.get(0).length() > 1){
+                String original = arr.get(0);
+                String cambio = abecedario.get(numeroABC);
+
+                arr.set(0, cambio);
+                for(ArrayList<String> arry: armazon){
+                    for(int x = 0; x < arry.size(); x++){
+                        String s = arry.get(x);
+                        if(s.contains(original)){
+                            String remplazo = s.replace(original, cambio);
+                            arry.set(x, remplazo);
+                        }
+                    }
+                }
+            }
+            numeroABC = numeroABC + 1;
+        }
+        ArrayList<ArrayList<String>> elRemplazo = new ArrayList<>();
+        for(ArrayList<String> desarmando: armazon){
+            ArrayList<String > pieza = new ArrayList<>();
+            for(String s: desarmando){
+                if(s.length() == 1){
+                    pieza.add(s);
+                }else{
+                    String terminal = "";
+                    for(int i = 0; i < s.length(); i++){
+                        String elemento = s.substring(i, i+1);
+                        boolean term = true;
+                        for(ArrayList<String> revision: armazon){
+                            if(elemento.equals(revision.get(0))){
+                                if(!terminal.equals("")){
+                                    pieza.add(terminal);
+                                    terminal = "";
+                                }
+                                pieza.add(elemento);
+
+                                term = false;
+                                break;
+                            }
+
+                        }
+                        if(term){
+                            terminal = terminal + elemento;
+                        }
+                    }
+                    if(!terminal.equals("")){
+                        pieza.add(terminal);
+                    }
+
+
+                }
+            }
+            elRemplazo.add(pieza);
+        }
+        return elRemplazo;
 
     }
 
